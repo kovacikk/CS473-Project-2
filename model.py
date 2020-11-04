@@ -137,7 +137,7 @@ print("MAE: ", mae)
 """
 
 Task 2 - Recommend dishes to users
-
+    > Calculate Precision and Recall
 
 """
 
@@ -151,4 +151,64 @@ def recommend(user, number):
             recommendation[dish[0]] = predict(user, dish[0])
 
     #Sort recommendations
-    
+    #recommendation = sorted(recommendation, key=recommendation.get)
+    recommendation = sorted(recommendation.items(), key = lambda r: (r[1], r[0]), reverse = True)
+    return recommendation[:number]
+
+rate = recommend("0", 10)
+
+#print(rate)
+
+# Calculate Precision
+
+averagePrecision10 = 0
+averageRecall10 = 0
+
+averagePrecision20 = 0
+averageRecall20 = 0
+
+userCount = len(test)
+for user in test:
+
+    totalRelevant = 0
+    for dishRating in test[user]:
+        # Dishes that are liked
+        if (dishRating[1] >= 3):
+            totalRelevant += 1
+
+    rate20 = recommend(user, 20)
+
+    #Find Relevant in 10 and 20
+    relevant10 = 0
+    relevant20 = 0
+    for i in range(20):
+        if rate20[i][1] >= 3:
+            if (i < 10):
+                relevant10 += 1
+            relevant20 += 1
+
+    precision10 = relevant10 / 10
+    recall10 = relevant10 / totalRelevant
+
+    precision20 = relevant20 / 20
+    recall20 = relevant20 / totalRelevant
+
+
+    averagePrecision10 += precision10
+    averageRecall10 += recall10
+
+    averagePrecision20 += precision20
+    averageRecall20 += recall20
+
+averagePrecision10 = averagePrecision10 / userCount
+averageRecall10 = averageRecall10 / userCount
+
+print("Precision10:", averagePrecision10)
+print("Recall10:", averageRecall10)
+
+averagePrecision20 = averagePrecision20 / userCount
+averageRecall20 = averageRecall20 / userCount
+
+print("Precision20:", averagePrecision20)
+print("Recall20:", averageRecall20)
+
