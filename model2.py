@@ -7,7 +7,8 @@ import math
 
 import json
 import copy
-random.seed(a= "slugcat2", version=2)
+
+random.seed(a= "slugcat23", version=2)
 
 dishesPath = './data/dishes.csv'
 trainPath = './data/user_ratings_train.json'
@@ -15,9 +16,9 @@ testPath = './data/user_ratings_test.json'
 
 dishes = pd.read_csv(dishesPath)
 
-
 dishes = dishes.to_numpy()
 dishNp = {}
+
 # Generate a Dictionary for Dishes
 for dish in dishes:
 
@@ -55,7 +56,6 @@ for user in train:
             ratingVector.append(0)
 
     ratingVectors[user] = np.array(ratingVector)
-#print(ratingVectors["0"])
 
 with open(testPath) as test_json:
     test = json.load(test_json)
@@ -73,7 +73,8 @@ for user in test:
 
 """
     Model Based Collaborative Filtering
-    - Soft K - Means Clustering
+    - Soft Clustering
+    - Gaussian Mixture Model
 
 
 """
@@ -86,20 +87,12 @@ Task 1 - Predict User Rating From 1-5
 - Using Mean Absolute Error (MAE) to evaluate
 
 """
-# Soft K-Mean
-
-#Randomly Select k documents to be the initial cluster centers
-
-# Gaussian Mixture Models with Expectation Maximization????
-
 
 
 # Set Number of Clusters
-k = 5 # Usually 10
+k = 5
 
-
-
-# Number of Ingredients
+# Number of Ingredients (or features)
 ingredients = len(dishes[1]) - 2
 
 
@@ -121,8 +114,8 @@ for i in range(k):
     
     #Choose a random dish to represent guassian mean
     value = random.randint(0, len(dishes))
-    test = dishNp[value]
-    clusterMean.append(test)
+    tester = dishNp[value]
+    clusterMean.append(tester)
     
     clusterVariance.append(np.array(temp2))
 
@@ -144,8 +137,8 @@ def probabilityModel (x, mean, deter, inv):
 
 prevClusters = clusterMean
 
-# Begin Iterating until Convergence (Or 1000 Iterations)
-for iteration in range(1):
+# Begin Iterating until Convergence (Or 20 Iterations)
+for iteration in range(20):
     prevprevClusters = copy.deepcopy(prevClusters)
     prevClusters = copy.deepcopy(clusterMean)
 
@@ -199,17 +192,19 @@ for iteration in range(1):
         clusterVariance[cluster] = variance
 
 
-    # Every 5 Iterations, Check if models have converged
+    # Every 1 Iteration(s), Check if models have converged
     if (iteration % 1) == 0:
+        """
         print("-------------------------------------")
         print("Iteration: %d" %(iteration))
         for kcluster in range(k):
             print("Cluster %d: %f" % (kcluster, np.linalg.norm(prevClusters[kcluster] - clusterMean[kcluster])))
-        
+        """
+
         #Check if all models have converged
         count = 0
         for kcluster in range(k):
-            if ((np.linalg.norm(prevClusters[kcluster] - clusterMean[kcluster])) < 0.0005):
+            if ((np.linalg.norm(prevClusters[kcluster] - clusterMean[kcluster])) < 0.005):
                 count = count + 1
         
         # All models are less than 0.005
@@ -217,40 +212,7 @@ for iteration in range(1):
             break
 
 
-
-# Now have clusterMean and clusterVariance for k to predict off
-
-"""
-# Function to Generate Probability a dish belongs in a cluster
-def probability(dishNumber, cluster, clusterMean, clusterVariance):
-    # Sum probabilities for all Clusters
-    prob = 0
-    
-    probSum = 0
-    for i in range(len(clusterMean)):
-        covariance = clusterVariance[i]
-
-        determinant = np.linalg.det(covariance)
-        if (determinant == 0):
-            covariance += varianceNoise
-            determinant = np.linalg.det(covariance)
-
-        norm_const = 1.0 / math.sqrt(2 * np.pi * determinant)
-        error = dishNp[dishNumber] - clusterMean[i]
-        result = math.pow(math.e, -0.5 * np.linalg.multi_dot([error, np.linalg.inv(clusterVariance[i]), error.T]))
-        
-        if (i == cluster):
-            prob = norm_const * result
-        
-        probSum += (norm_const * result) * (1.0 / k)
-
-    # Find proportion of probability to cluster over all clusters
-    probCX = (prob * (1.0/k)) / (probSum)
-    
-    return probCX
-"""
-
-# Build Final Dish Probability Dictionary
+# Build Final Dish Probability Dictionary for Quick Probability
 
 finalInv = {}
 finalDeter = {}
@@ -286,7 +248,7 @@ def probability(dishNumber, cluster):
     return finalProbCX[cluster][dishNumber]
 
 
-
+"""
 #Test Against 3 Dishes
 total = 0
 for cluster in range(k):
@@ -295,45 +257,143 @@ for cluster in range(k):
     print("Dish %d | Cluster %d: %f" %(450, cluster, probability(450, cluster)))
     print("Dish %d | Cluster %d: %f" %(600, cluster, probability(600, cluster)))
     print("Dish %d | Cluster %d: %f" %(2, cluster, probability(2, cluster)))
-
+"""
 
 
 
 
 #Now Use This Model to Estimate Rating
-user = "399"
 
+
+
+# Use Vector Space Simularity Between The User Rated Dishes and Cluster Vectors
 def predict(userT, dishT):
+    # Generate Vectors that represent how close to clusters dishes are
+    vectorA = []
+
+    for i in range(k):
+        vectorA.append(probability(dishT, i))
+    
+    vectorA = np.array(vectorA)
+
+    # Compute Cosine Simularity between dishes cluster vectors
+    sim = {}
+    for dish in trainDict[userT]:
+        vectorB = []
+        for i in range(k):
+            vectorB.append(probability(dishT, i))
+        vectorB = np.array(vectorB)
+
+        #Cosine Simularity
+        consineValue = np.dot(vectorA, vectorB) / (np.linalg.norm(vectorA) * np.linalg.norm(vectorB))
+        sim[dish] = consineValue
+
     topSum = 0
     bottomSum = 0
+    for dish in sim:
+        topSum += sim[dish] * (trainDict[userT][dish] - averageRatings[userT])
+        bottomSum += abs(sim[dish])
 
-    # Calculate What the User Thinks of Each Cluster
+    if (bottomSum == 0):
+        bottomSum = 1
 
-    # Itialize Sum to 0
-    clusterRate = {}
-    for i in range(k):
-        clusterRate[i] = 0
+    prediction = averageRatings[userT] + (topSum / bottomSum)
+    return prediction
 
-    # Go Through All Previously Rated Dishes
-    for dish in trainDict[user]:
-        #print("Dish %d: %f" %(dish, trainDict[user][dish]))
 
-        # Go Through Each Cluster adding What the User Usually Rates in that cluster
-        for i in range(k):
-            clusterRate[i] += probability(dish, i) * trainDict[user][dish]
-            print(clusterRate[i])
 
-    # Normalize by Number of Dishes
-    for i in range(k):
-        clusterRate[i] = clusterRate[i] / len(trainDict[user])
-        #print(clusterRate[i])
+# Calculate MAE
+mae = 0
+n = 0
+for user in test:
+    for dishRating in test[user]:
+        prediction = predict(user, dishRating[0])
+        mae += abs(dishRating[1] - prediction)
+        n += 1
 
-    result = 0
-    for i in range(k):
-        result += clusterRate[i] * probability(dishT, i, clusterMean, clusterVariance)
+mae = mae / n
+print("Task 1 MAE: %f" %(mae))
 
-    print(len(trainDict[user]))
 
-    return result
 
-print(predict(user, 813))
+"""
+
+Task 2 - Recommend Dishes
+
+
+"""
+
+# Returns the number of recommended results as a list
+def recommend(user, number):
+    recommendation = {}
+
+    for dish in dishes:
+        #If dish not previously rated, predict and add to list
+        if dish[0] not in trainDict[user]:
+            recommendation[dish[0]] = predict(user, dish[0])
+
+    #Sort recommendations
+    recommendation = sorted(recommendation.items(), key = lambda r: (r[1], r[0]), reverse = True)
+    return recommendation[:number]
+
+rate = recommend("0", 10)
+
+
+# Calculate Precision
+
+averagePrecision10 = 0
+averageRecall10 = 0
+
+averagePrecision20 = 0
+averageRecall20 = 0
+
+userCount = len(test)
+for user in test:
+
+    totalRelevant = 0
+    for dishRating in test[user]:
+        # Dishes that are liked
+        if (dishRating[1] >= 3):
+            totalRelevant += 1
+
+    rate20 = recommend(user, 20)
+
+    #Find Relevant in 10 and 20
+    relevant10 = 0
+    relevant20 = 0
+    for i in range(20):
+        if rate20[i][1] >= 3:
+            if (i < 10):
+                relevant10 += 1
+            relevant20 += 1
+
+    precision10 = relevant10 / 10
+    recall10 = relevant10 / totalRelevant
+
+    precision20 = relevant20 / 20
+    recall20 = relevant20 / totalRelevant
+
+
+    averagePrecision10 += precision10
+    averageRecall10 += recall10
+
+    averagePrecision20 += precision20
+    averageRecall20 += recall20
+
+averagePrecision10 = averagePrecision10 / userCount
+averageRecall10 = averageRecall10 / userCount
+
+#print("Precision10:", averagePrecision10)
+#print("Recall10:", averageRecall10)
+
+averagePrecision20 = averagePrecision20 / userCount
+averageRecall20 = averageRecall20 / userCount
+
+#print("Precision20:", averagePrecision20)
+#print("Recall20:", averageRecall20)
+
+print("Task 2 Precision@10: %f" %(averagePrecision10))
+print("Task 2 Precision@20: %f" %(averagePrecision20))
+
+print("Task 2 Recall@10: %f" %(averageRecall10))
+print("Task 2 Recall@20: %f" %(averageRecall20))

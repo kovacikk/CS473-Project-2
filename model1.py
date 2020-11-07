@@ -11,17 +11,7 @@ testPath = './data/user_ratings_test.json'
 
 dishes = pd.read_csv(dishesPath)
 
-
 dishes = dishes.to_numpy()
-
-#Iterate Through each dish
-for dish in dishes:
-    # dish[0] is the dish id
-    # dish[1] is the dish name
-    # ...
-    pass
-
-#print(len(dishes))
 
 
 with open(trainPath) as train_json:
@@ -52,7 +42,6 @@ for user in train:
             ratingVector.append(0)
 
     ratingVectors[user] = np.array(ratingVector)
-#print(ratingVectors["0"])
 
 with open(testPath) as test_json:
     test = json.load(test_json)
@@ -76,6 +65,7 @@ for user in test:
 
 
 """
+
 
 
 
@@ -115,13 +105,12 @@ def predict(userT, dish):
     # Avoid Divide by Zero
     if bottomSum == 0:
         bottomSum = 1
-
+ 
     prediction = averageRatings[userT] + (topSum / bottomSum)
     return prediction
 
 
 # Evaluation:
-
 mae = 0
 n = 0
 for user in test:
@@ -131,7 +120,7 @@ for user in test:
         n += 1
 
 mae = mae / n
-print("MAE: ", mae)
+print("Task 1 MAE: %f" %(mae))
 
 
 """
@@ -151,13 +140,11 @@ def recommend(user, number):
             recommendation[dish[0]] = predict(user, dish[0])
 
     #Sort recommendations
-    #recommendation = sorted(recommendation, key=recommendation.get)
     recommendation = sorted(recommendation.items(), key = lambda r: (r[1], r[0]), reverse = True)
     return recommendation[:number]
 
 rate = recommend("0", 10)
 
-#print(rate)
 
 # Calculate Precision
 
@@ -203,12 +190,17 @@ for user in test:
 averagePrecision10 = averagePrecision10 / userCount
 averageRecall10 = averageRecall10 / userCount
 
-print("Precision10:", averagePrecision10)
-print("Recall10:", averageRecall10)
+#print("Precision10:", averagePrecision10)
+#print("Recall10:", averageRecall10)
 
 averagePrecision20 = averagePrecision20 / userCount
 averageRecall20 = averageRecall20 / userCount
 
-print("Precision20:", averagePrecision20)
-print("Recall20:", averageRecall20)
+#print("Precision20:", averagePrecision20)
+#print("Recall20:", averageRecall20)
 
+print("Task 2 Precision@10: %f" %(averagePrecision10))
+print("Task 2 Precision@20: %f" %(averagePrecision20))
+
+print("Task 2 Recall@10: %f" %(averageRecall10))
+print("Task 2 Recall@20: %f" %(averageRecall20))
