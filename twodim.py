@@ -5,9 +5,29 @@ import pandas as pd
 import random
 import math
 
+from sklearn.datasets import make_blobs
+import matplotlib.pyplot as plt
+
 import json
 import copy
 random.seed(a= "slugcat2", version=2)
+
+
+features, clusters = make_blobs(n_samples = 1000,n_features = 2, centers = 3, cluster_std = 0.5,shuffle = True)
+
+#print(clusters)
+
+
+
+#print("Feature Matrix: ")
+#print(pd.DataFrame(features, columns=["Feature 1", "Feature 2"]).head())
+
+
+
+#print(features)
+
+
+
 
 dishesPath = './data/dishes.csv'
 trainPath = './data/user_ratings_train.json'
@@ -19,13 +39,18 @@ dishes = pd.read_csv(dishesPath)
 dishes = dishes.to_numpy()
 dishNp = {}
 # Generate a Dictionary for Dishes
-for dish in dishes:
+counter = 0
+for dish in features:
 
-    temp = np.zeros(len(dish[2:]))
-    for i in range(len(dish[2:])):
-        temp[i] = dish[i + 2]
+    temp = np.zeros(len(dish))
+    for i in range(len(dish)):
+        temp[i] = dish[i]
         
-    dishNp[dish[0]] = np.array([temp])
+    dishNp[counter] = np.array([temp])
+    counter += 1
+
+#print(dishNp[1])
+#exit()
 
 with open(trainPath) as train_json:
     train = json.load(train_json)
@@ -95,12 +120,12 @@ Task 1 - Predict User Rating From 1-5
 
 
 # Set Number of Clusters
-k = 5 # Usually 10
+k = 3 # Usually 10
 
 
 
 # Number of Ingredients
-ingredients = len(dishes[1]) - 2
+ingredients = 2
 
 
 # Guess k gaussians - means and covariance
@@ -120,7 +145,7 @@ for i in range(k):
         temp2.append(row)
     
     #Choose a random dish to represent guassian mean
-    value = random.randint(0, len(dishes))
+    value = random.randint(0, len(dishNp))
     test = dishNp[value]
     clusterMean.append(test)
     
@@ -129,7 +154,7 @@ for i in range(k):
 
 
 # Used to Apply Noise to Covariance to avoid Singularity
-varianceNoise =  clusterVariance[0] * math.pow(10, -1)
+varianceNoise =  clusterVariance[0] * math.pow(10, -6)
 
 #Calculate Probability 
 def probabilityModel (x, mean, deter, inv):
@@ -145,7 +170,7 @@ def probabilityModel (x, mean, deter, inv):
 prevClusters = clusterMean
 
 # Begin Iterating until Convergence (Or 1000 Iterations)
-for iteration in range(1):
+for iteration in range(1000):
     prevprevClusters = copy.deepcopy(prevClusters)
     prevClusters = copy.deepcopy(clusterMean)
 
@@ -161,13 +186,23 @@ for iteration in range(1):
 
     probs = {}
     #To Save Time Calculate All Probabilities
-    for dish in dishes:
+    counter = 0
+    for dish in features:
+        
         prob = {}
         for i in range(k):
-            prob[i] = probabilityModel(dishNp[dish[0]], clusterMean[i], deter[i], inv[i])
+            prob[i] = probabilityModel(dishNp[counter], clusterMean[i], deter[i], inv[i])
 
-        probs[dish[0]] = prob
+        probs[counter] = prob
+        
+        counter += 1
 
+    
+    maxProb = {}
+    counter2 = 0
+    for dish in features:
+        maxProb[counter2] = [0, 0, 0] #Cluster, Probability
+        counter2 += 1
 
     #Update Mean and Covariance for Each Cluster
     for cluster in range(k):
@@ -175,24 +210,37 @@ for iteration in range(1):
         mean = np.zeros(ingredients)
         variance = np.zeros((ingredients, ingredients))
 
-        for dish in dishes:
+        counter1 = 0
+        for dish in features:
 
             #Get ProbXiC for Each Cluster
             probSum = 0
             for i in range(k):
-                probSum += probs[dish[0]][i] * (1.0/k)
+                probSum += probs[counter1][i] * (1.0/k)
 
+
+            #print(probSum)
+            
 
             # Get probCXi 
-            probCX = (probs[dish[0]][cluster] * (1.0/k)) / (probSum)
-            probStuff = (probCX / ( (1.0/k) * len(dishes) ))
+            probCX = (probs[counter1][cluster] * (1.0/k)) / (probSum)
+
+            #print(probCX)
+            
+
+            maxProb[counter1][cluster] = probCX
+            #print(probCX)
+            #exit()
+
+            probStuff = (probCX / ( (1.0/k) * len(features) ))
 
             # Add to Mean Sum
-            mean = np.add(mean, probStuff * dishNp[dish[0]])
+            mean = np.add(mean, (probStuff * dishNp[counter1]))
 
             # Add to Variance Sum
-            error = dishNp[dish[0]] - mean
+            error = dishNp[counter1] - mean
             variance = np.add(variance, probStuff * np.matmul(error.T, error))
+            counter1 += 1
 
         # Set New Mean and Variance for Each Cluster
         clusterMean[cluster] = mean
@@ -203,24 +251,53 @@ for iteration in range(1):
     if (iteration % 1) == 0:
         print("-------------------------------------")
         print("Iteration: %d" %(iteration))
+        
         for kcluster in range(k):
-            print("Cluster %d: %f" % (kcluster, np.linalg.norm(prevClusters[kcluster] - clusterMean[kcluster])))
+            print("Cluster %d: %f" %(kcluster, np.linalg.norm(prevClusters[kcluster] - clusterMean[kcluster])))
+
+        c = np.empty((0,4), float)
+        for i in range(len(maxProb)):
+            
+            c = np.append(c, np.array([[maxProb[i][0], maxProb[i][1], maxProb[i][2], 1.0]]), axis = 0)
+
+
+        x = features[:,0]
+        y = features[:,1]
+        m = np.ones(len(features)) * 5
+    
+
+        
+        for cluster in range(k):
+            x = np.append(x,prevClusters[cluster][0][0])
+            y = np.append(y,prevClusters[cluster][0][1])
+            c = np.append(c, np.array([[0,0,0, 1.0]]), axis = 0)
+            c[len(c)-1][cluster] = 1.0
+            m = np.append(m, 500)
+            #a = np.append(a, 1.0)
+
+
+        #plt.scatter(x, y, color=c, s=m)
+        #plt.show()
+        
+
+        #for kcluster in range(k):
+            #print("Cluster %d: %f" % (kcluster, np.linalg.norm(prevprevClusters[kcluster] - clusterMean[kcluster])))
         
         #Check if all models have converged
-        count = 0
+        counter2 = 0
         for kcluster in range(k):
             if ((np.linalg.norm(prevClusters[kcluster] - clusterMean[kcluster])) < 0.0005):
-                count = count + 1
+                counter2 = counter2 + 1
         
         # All models are less than 0.005
-        if (count == k):
+        if (counter2 == k):
             break
 
 
 
 # Now have clusterMean and clusterVariance for k to predict off
 
-"""
+
 # Function to Generate Probability a dish belongs in a cluster
 def probability(dishNumber, cluster, clusterMean, clusterVariance):
     # Sum probabilities for all Clusters
@@ -242,98 +319,48 @@ def probability(dishNumber, cluster, clusterMean, clusterVariance):
         if (i == cluster):
             prob = norm_const * result
         
-        probSum += (norm_const * result) * (1.0 / k)
+        probSum += (norm_const * result) * (1.0/k)
 
     # Find proportion of probability to cluster over all clusters
     probCX = (prob * (1.0/k)) / (probSum)
     
     return probCX
-"""
-
-# Build Final Dish Probability Dictionary
-
-finalInv = {}
-finalDeter = {}
-for i in range(k):
-    finalDeter[i] = np.linalg.det(clusterVariance[i])
-    if (finalDeter[i] == 0):
-        clusterVariance[i] = clusterVariance[i] + varianceNoise
-        finalDeter[i] = np.linalg.det(clusterVariance[i])
-    finalInv[i] = np.linalg.inv(clusterVariance[i])
-
-finalProbs = {}
-for dish in dishes:
-    prob = {}
-    for i in range(k):
-        prob[i] = probabilityModel(dishNp[dish[0]], clusterMean[i], finalDeter[i], finalInv[i])
-
-    finalProbs[dish[0]] = prob
-
-finalProbCX = {}
-for cluster in range(k):
-    finalProbCXInner = {}
-    for dish in dishes:
-        probSum = 0
-        for i in range(k):
-            probSum += finalProbs[dish[0]][i] * (1.0/k)
-
-        # Get probCXi 
-        probCX = (finalProbs[dish[0]][cluster] * (1.0/k)) / (probSum)
-        finalProbCXInner[dish[0]] = probCX
-    finalProbCX[cluster] = finalProbCXInner
-
-def probability(dishNumber, cluster):
-    return finalProbCX[cluster][dishNumber]
-
 
 
 #Test Against 3 Dishes
 total = 0
 for cluster in range(k):
     print("------------------------------")
-    print("Dish %d | Cluster %d: %f" %(10, cluster, probability(10, cluster)))
-    print("Dish %d | Cluster %d: %f" %(450, cluster, probability(450, cluster)))
-    print("Dish %d | Cluster %d: %f" %(600, cluster, probability(600, cluster)))
-    print("Dish %d | Cluster %d: %f" %(2, cluster, probability(2, cluster)))
+    print("Dish %d | Cluster %d: %f" %(10, cluster, probability(10, cluster, clusterMean, clusterVariance)))
+    print("Dish %d | Cluster %d: %f" %(1, cluster, probability(1, cluster, clusterMean, clusterVariance)))
+    print("Dish %d | Cluster %d: %f" %(24, cluster, probability(24, cluster, clusterMean, clusterVariance)))
+    print("Dish %d | Cluster %d: %f" %(150, cluster, probability(150, cluster, clusterMean, clusterVariance)))
 
+x = features[:,0]
+y = features[:,1]
+m = np.ones(len(features)) * 5
 
+c = np.empty((0,4), float)
+for i in range(len(maxProb)):   
+    c = np.append(c, np.array([[maxProb[i][0], maxProb[i][1], maxProb[i][2], 1.0]]), axis = 0)
 
+for cluster in range(k):
+    x = np.append(x,prevClusters[cluster][0][0])
+    y = np.append(y,prevClusters[cluster][0][1])
+    c = np.append(c, np.array([[0,0,0, 1.0]]), axis = 0)
+    c[len(c)-1][cluster] = 1.0
+    m = np.append(m, 500)
 
+def addGraph(dishNumber, x, y, c, m):
+    x = np.append(x, dishNp[dishNumber][0][0])
+    y = np.append(y, dishNp[dishNumber][0][1])
+    c = np.append(c, np.array([[probability(dishNumber, 0, clusterMean, clusterVariance), probability(dishNumber, 1, clusterMean, clusterVariance), probability(dishNumber, 2, clusterMean, clusterVariance), 1.0]]) , axis = 0)
+    m = np.append(m, 1000)
 
-#Now Use This Model to Estimate Rating
-user = "399"
+    return x, y, c, m
 
-def predict(userT, dishT):
-    topSum = 0
-    bottomSum = 0
+x, y, c, m = addGraph(200, x, y, c, m)
+x, y, c, m = addGraph(300, x, y, c, m)
 
-    # Calculate What the User Thinks of Each Cluster
-
-    # Itialize Sum to 0
-    clusterRate = {}
-    for i in range(k):
-        clusterRate[i] = 0
-
-    # Go Through All Previously Rated Dishes
-    for dish in trainDict[user]:
-        #print("Dish %d: %f" %(dish, trainDict[user][dish]))
-
-        # Go Through Each Cluster adding What the User Usually Rates in that cluster
-        for i in range(k):
-            clusterRate[i] += probability(dish, i) * trainDict[user][dish]
-            print(clusterRate[i])
-
-    # Normalize by Number of Dishes
-    for i in range(k):
-        clusterRate[i] = clusterRate[i] / len(trainDict[user])
-        #print(clusterRate[i])
-
-    result = 0
-    for i in range(k):
-        result += clusterRate[i] * probability(dishT, i, clusterMean, clusterVariance)
-
-    print(len(trainDict[user]))
-
-    return result
-
-print(predict(user, 813))
+plt.scatter(x, y, color=c, s=m)
+plt.show()
