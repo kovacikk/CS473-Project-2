@@ -1,4 +1,12 @@
-# model.py
+"""
+model1.py
+
+Kyle Kovacik
+Memory-Based Collaborative Filtering
+- Predicts Ratings and Generates Recommendations
+- Vector Space Cosine Simularity
+
+"""
 
 import numpy as np
 import pandas as pd 
@@ -10,7 +18,6 @@ trainPath = './data/user_ratings_train.json'
 testPath = './data/user_ratings_test.json'
 
 dishes = pd.read_csv(dishesPath)
-
 dishes = dishes.to_numpy()
 
 
@@ -42,7 +49,6 @@ for user in train:
             ratingVector.append(0)
 
     ratingVectors[user] = np.array(ratingVector)
-
 with open(testPath) as test_json:
     test = json.load(test_json)
 
@@ -52,7 +58,6 @@ for user in test:
     testDictInner = {}
     for dishRating in test[user]:
         testDictInner[dishRating[0]] = dishRating[1]
-
     testDict[user] = testDictInner
 
 
@@ -190,14 +195,10 @@ for user in test:
 averagePrecision10 = averagePrecision10 / userCount
 averageRecall10 = averageRecall10 / userCount
 
-#print("Precision10:", averagePrecision10)
-#print("Recall10:", averageRecall10)
-
 averagePrecision20 = averagePrecision20 / userCount
 averageRecall20 = averageRecall20 / userCount
 
-#print("Precision20:", averagePrecision20)
-#print("Recall20:", averageRecall20)
+# Results
 
 print("Task 2 Precision@10: %f" %(averagePrecision10))
 print("Task 2 Precision@20: %f" %(averagePrecision20))

@@ -1,4 +1,12 @@
-# model.py
+"""
+model2.py
+
+Kyle Kovacik
+Model-Based Clustering Approach
+- Predicts Ratings and Generates Recommendations
+- Guassian Mixture Model
+
+"""
 
 import numpy as np
 import pandas as pd
@@ -194,12 +202,6 @@ for iteration in range(20):
 
     # Every 1 Iteration(s), Check if models have converged
     if (iteration % 1) == 0:
-        """
-        print("-------------------------------------")
-        print("Iteration: %d" %(iteration))
-        for kcluster in range(k):
-            print("Cluster %d: %f" % (kcluster, np.linalg.norm(prevClusters[kcluster] - clusterMean[kcluster])))
-        """
 
         #Check if all models have converged
         count = 0
@@ -246,23 +248,6 @@ for cluster in range(k):
 
 def probability(dishNumber, cluster):
     return finalProbCX[cluster][dishNumber]
-
-
-"""
-#Test Against 3 Dishes
-total = 0
-for cluster in range(k):
-    print("------------------------------")
-    print("Dish %d | Cluster %d: %f" %(10, cluster, probability(10, cluster)))
-    print("Dish %d | Cluster %d: %f" %(450, cluster, probability(450, cluster)))
-    print("Dish %d | Cluster %d: %f" %(600, cluster, probability(600, cluster)))
-    print("Dish %d | Cluster %d: %f" %(2, cluster, probability(2, cluster)))
-"""
-
-
-
-
-#Now Use This Model to Estimate Rating
 
 
 
@@ -383,14 +368,11 @@ for user in test:
 averagePrecision10 = averagePrecision10 / userCount
 averageRecall10 = averageRecall10 / userCount
 
-#print("Precision10:", averagePrecision10)
-#print("Recall10:", averageRecall10)
-
 averagePrecision20 = averagePrecision20 / userCount
 averageRecall20 = averageRecall20 / userCount
 
-#print("Precision20:", averagePrecision20)
-#print("Recall20:", averageRecall20)
+
+#Results
 
 print("Task 2 Precision@10: %f" %(averagePrecision10))
 print("Task 2 Precision@20: %f" %(averagePrecision20))

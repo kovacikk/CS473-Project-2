@@ -1,4 +1,12 @@
-# model.py
+"""
+twodim.py
+
+Kyle Kovacik
+
+Model-Based Clustering Using only Two Dimensions
+- Used to test visually to help when doing multiple dimensions
+
+"""
 
 import numpy as np
 import pandas as pd
@@ -15,29 +23,15 @@ random.seed(a= "slugcat2", version=2)
 
 features, clusters = make_blobs(n_samples = 1000,n_features = 2, centers = 3, cluster_std = 0.5,shuffle = True)
 
-#print(clusters)
-
-
-
-#print("Feature Matrix: ")
-#print(pd.DataFrame(features, columns=["Feature 1", "Feature 2"]).head())
-
-
-
-#print(features)
-
-
-
 
 dishesPath = './data/dishes.csv'
 trainPath = './data/user_ratings_train.json'
 testPath = './data/user_ratings_test.json'
 
 dishes = pd.read_csv(dishesPath)
-
-
 dishes = dishes.to_numpy()
 dishNp = {}
+
 # Generate a Dictionary for Dishes
 counter = 0
 for dish in features:
@@ -49,8 +43,6 @@ for dish in features:
     dishNp[counter] = np.array([temp])
     counter += 1
 
-#print(dishNp[1])
-#exit()
 
 with open(trainPath) as train_json:
     train = json.load(train_json)
@@ -218,19 +210,11 @@ for iteration in range(1000):
             for i in range(k):
                 probSum += probs[counter1][i] * (1.0/k)
 
-
-            #print(probSum)
-            
-
             # Get probCXi 
             probCX = (probs[counter1][cluster] * (1.0/k)) / (probSum)
-
-            #print(probCX)
-            
+       
 
             maxProb[counter1][cluster] = probCX
-            #print(probCX)
-            #exit()
 
             probStuff = (probCX / ( (1.0/k) * len(features) ))
 
@@ -273,16 +257,7 @@ for iteration in range(1000):
             c = np.append(c, np.array([[0,0,0, 1.0]]), axis = 0)
             c[len(c)-1][cluster] = 1.0
             m = np.append(m, 500)
-            #a = np.append(a, 1.0)
-
-
-        #plt.scatter(x, y, color=c, s=m)
-        #plt.show()
-        
-
-        #for kcluster in range(k):
-            #print("Cluster %d: %f" % (kcluster, np.linalg.norm(prevprevClusters[kcluster] - clusterMean[kcluster])))
-        
+            
         #Check if all models have converged
         counter2 = 0
         for kcluster in range(k):
